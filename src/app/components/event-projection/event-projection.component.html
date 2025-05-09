@@ -1,0 +1,174 @@
+<div class="container">
+  <!-- Loading state -->
+  <div *ngIf="loading" class="loading-container">
+    <mat-spinner diameter="48" color="primary"></mat-spinner>
+    <p>Carregando projeções de eventos...</p>
+    <button
+      class="reload-button"
+      mat-raised-button
+      color="primary"
+      (click)="refreshData()"
+    >
+      <mat-icon>refresh</mat-icon>
+      Recarregar
+    </button>
+  </div>
+
+  <!-- Main content -->
+  <mat-card *ngIf="!loading" class="main-card">
+    <mat-card-header>
+      <mat-card-title>Iniciar novas Entidades</mat-card-title>
+      <button mat-icon-button class="close-icon">
+        <mat-icon>close</mat-icon>
+      </button>
+    </mat-card-header>
+
+    <mat-card-content>
+      <!-- Entities section -->
+      <section class="entities-section">
+        <div class="input-container">
+          <div class="entities-content">
+            <div class="entities-text">
+              <h3 class="entities-title">Entidades à iniciar</h3>
+              <p class="entities-description">
+                Após o início, os eventos serão disponibilizados para<br />
+                execução nos dias que estão definidos em seus ciclos.
+              </p>
+            </div>
+
+            <div class="entities-controls">
+              <div class="input-box" (click)="openEntitySelection()">
+                <button mat-icon-button class="play-button">
+                  <mat-icon>play_arrow</mat-icon>
+                </button>
+
+                <div class="input-value">{{ getEntityCount() }}</div>
+
+                <div class="entities-label">Entidades</div>
+              </div>
+
+              <div class="events-counter">
+                Novos eventos para hoje:
+                <strong>{{ getTodayEventsCount() }} eventos</strong>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="line"></div>
+      </section>
+
+      <!-- Cycles section -->
+      <section class="cycles-section">
+        <div class="cycles-header" (click)="toggleCyclesSection()">
+          <h2 class="section-title">Selecione ciclos (opcional)</h2>
+          <mat-icon>{{
+            showCyclesSection ? "expand_less" : "expand_more"
+          }}</mat-icon>
+        </div>
+
+        <div class="cycles-description">
+          Por padrão as entidades são selecionadas automaticamente de acordo com
+          os ciclos que você participa e suas prioridades
+        </div>
+
+        <div class="collapsible-content" [class.hidden]="!showCyclesSection">
+          <div class="table-columns-header">
+            <div class="header-cell header-ciclos">
+              Ciclos
+              <span class="ciclos-arrow">
+                <mat-icon>expand_more</mat-icon>
+              </span>
+            </div>
+            <div class="header-cell">Selecionados/Disponíveis</div>
+            <div class="header-cell">Eventos para hoje</div>
+          </div>
+
+          <div class="cycles-table-container">
+            <div class="cycles-subheader-row">
+              Ciclos com entidades disponíveis ({{ cycles.length }})
+            </div>
+
+            <div class="cycles-list">
+              <div
+                class="table-row"
+                *ngFor="let cycle of cycles; let i = index"
+                [class.selected]="selected[i]"
+                (click)="toggleCycleSelection(cycle)"
+              >
+                <div class="cycle-cell">
+                  <div
+                    class="custom-checkbox"
+                    (click)="$event.stopPropagation()"
+                  >
+                    <div
+                      class="checkbox-container"
+                      [class.checked]="selected[i]"
+                      (click)="toggleCycleSelection(cycle)"
+                    >
+                      <mat-icon *ngIf="selected[i]" class="check-icon"
+                        >check</mat-icon
+                      >
+                    </div>
+                  </div>
+                  <div
+                    class="priority-indicator"
+                    [ngClass]="'priority-' + cycle.priority.toLowerCase()"
+                  >
+                    <mat-icon>{{ getPriorityIcon(cycle.priority) }}</mat-icon>
+                  </div>
+                  <span class="cycle-name">{{ cycle.name }}</span>
+                </div>
+                <div class="distribution-cell">
+                  <span class="selected-count">{{ distributed[i] || 0 }}</span
+                  ><span class="divider-available"
+                    >/{{ cycle.availableEntities }}</span
+                  >
+                </div>
+                <div class="events-cell">
+                  {{ getCycleTodayEvents(cycle) }}
+                </div>
+              </div>
+
+              <div class="empty-state" *ngIf="cycles.length === 0">
+                Ciclos com entidades disponíveis (0)
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Forecast section -->
+      <section class="forecast-section">
+        <h2 class="section-title">Previsão de eventos futuros</h2>
+
+        <p class="forecast-description">
+          A previsão inclui eventos dos ciclos relacionados às entidades e é
+          atualizada sempre que novas entidades forem iniciadas.
+        </p>
+
+        <div class="chart-container">
+          <div class="chart-wrapper">
+            <canvas #forecastChart class="chart-canvas"></canvas>
+          </div>
+        </div>
+      </section>
+    </mat-card-content>
+
+    <!-- Action buttons -->
+    <mat-card-actions align="end">
+      <button mat-stroked-button class="secondary-button" (click)="cancel()">
+        Fechar
+      </button>
+      <button
+        mat-raised-button
+        class="primary-button"
+        color="primary"
+        (click)="submit()"
+        [disabled]="!isFormValid()"
+      >
+        Iniciar novas entidades
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
