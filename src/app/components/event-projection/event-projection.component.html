@@ -1,6 +1,6 @@
 <div class="container">
-  <!-- Loading state -->
-  <div *ngIf="loading" class="loading-container">
+  @if (loading()) {
+  <div class="loading-container">
     <mat-spinner diameter="48" color="primary"></mat-spinner>
     <p>Carregando projeções de eventos...</p>
     <button
@@ -13,18 +13,16 @@
       Recarregar
     </button>
   </div>
-
-  <!-- Main content -->
-  <mat-card *ngIf="!loading" class="main-card">
+  } @if (!loading()) {
+  <mat-card class="main-card">
     <mat-card-header>
       <mat-card-title>Iniciar novas Entidades</mat-card-title>
-      <button mat-icon-button class="close-icon">
+      <button mat-icon-button class="close-icon" (click)="cancel()">
         <mat-icon>close</mat-icon>
       </button>
     </mat-card-header>
 
     <mat-card-content>
-      <!-- Entities section -->
       <section class="entities-section">
         <div class="input-container">
           <div class="entities-content">
@@ -37,19 +35,36 @@
             </div>
 
             <div class="entities-controls">
-              <div class="input-box" (click)="openEntitySelection()">
-                <button mat-icon-button class="play-button">
+              <div class="input-box">
+                <button
+                  mat-icon-button
+                  class="play-button"
+                  [disabled]="entityCount.value <= 1"
+                >
                   <mat-icon>play_arrow</mat-icon>
                 </button>
 
-                <div class="input-value">{{ getEntityCount() }}</div>
+                <input
+                  type="number"
+                  class="input-value"
+                  [class.invalid]="entityCount.invalid"
+                  [formControl]="entityCount"
+                  min="1"
+                  (blur)="validateEntityCount()"
+                />
 
                 <div class="entities-label">Entidades</div>
               </div>
 
+              @if (entityCount.invalid && entityCount.touched) {
+              <div class="validation-error">
+                {{ getEntityCountError() }}
+              </div>
+              }
+
               <div class="events-counter">
                 Novos eventos para hoje:
-                <strong>{{ getTodayEventsCount() }} eventos</strong>
+                <strong>{{ todayEventsCount() }} eventos</strong>
               </div>
             </div>
           </div>
@@ -58,12 +73,11 @@
         <div class="line"></div>
       </section>
 
-      <!-- Cycles section -->
       <section class="cycles-section">
         <div class="cycles-header" (click)="toggleCyclesSection()">
           <h2 class="section-title">Selecione ciclos (opcional)</h2>
           <mat-icon>{{
-            showCyclesSection ? "expand_less" : "expand_more"
+            showCyclesSection() ? "expand_less" : "expand_more"
           }}</mat-icon>
         </div>
 
@@ -72,7 +86,7 @@
           os ciclos que você participa e suas prioridades
         </div>
 
-        <div class="collapsible-content" [class.hidden]="!showCyclesSection">
+        <div class="collapsible-content" [class.hidden]="!showCyclesSection()">
           <div class="table-columns-header">
             <div class="header-cell header-ciclos">
               Ciclos
@@ -86,14 +100,15 @@
 
           <div class="cycles-table-container">
             <div class="cycles-subheader-row">
-              Ciclos com entidades disponíveis ({{ cycles.length }})
+              Ciclos com entidades disponíveis ({{ getAvailableCyclesCount() }})
             </div>
 
             <div class="cycles-list">
+              @for (cycle of cycles(); track cycle.name; let i = $index) { @if
+              (cycle.availableEntities > 0) {
               <div
                 class="table-row"
-                *ngFor="let cycle of cycles; let i = index"
-                [class.selected]="selected[i]"
+                [class.selected]="selected()[i]"
                 (click)="toggleCycleSelection(cycle)"
               >
                 <div class="cycle-cell">
@@ -103,24 +118,29 @@
                   >
                     <div
                       class="checkbox-container"
-                      [class.checked]="selected[i]"
+                      [class.checked]="selected()[i]"
                       (click)="toggleCycleSelection(cycle)"
                     >
-                      <mat-icon *ngIf="selected[i]" class="check-icon"
-                        >check</mat-icon
-                      >
+                      @if (selected()[i]) {
+                      <mat-icon class="check-icon">check</mat-icon>
+                      }
                     </div>
                   </div>
                   <div
                     class="priority-indicator"
-                    [ngClass]="'priority-' + cycle.priority.toLowerCase()"
+                    [ngClass]="getPriorityClass(cycle.priority)"
                   >
-                    <mat-icon>{{ getPriorityIcon(cycle.priority) }}</mat-icon>
+                    @if (cycle.priority === 'HIGH' || cycle.priority ===
+                    'MEDIUM' || cycle.priority === 'LOW') {
+                    <mat-icon>north</mat-icon>
+                    } @else {
+                    <mat-icon>south</mat-icon>
+                    }
                   </div>
                   <span class="cycle-name">{{ cycle.name }}</span>
                 </div>
                 <div class="distribution-cell">
-                  <span class="selected-count">{{ distributed[i] || 0 }}</span
+                  <span class="selected-count">{{ distributed()[i] || 0 }}</span
                   ><span class="divider-available"
                     >/{{ cycle.availableEntities }}</span
                   >
@@ -129,16 +149,52 @@
                   {{ getCycleTodayEvents(cycle) }}
                 </div>
               </div>
-
-              <div class="empty-state" *ngIf="cycles.length === 0">
+              } } @empty {
+              <div class="empty-state">
                 Ciclos com entidades disponíveis (0)
               </div>
+              }
+            </div>
+
+            <div class="cycles-subheader-row">
+              Ciclos sem entidades disponíveis ({{
+                getUnavailableCyclesCount()
+              }})
+            </div>
+
+            <div class="cycles-list">
+              @for (cycle of cycles(); track cycle.name; let i = $index) { @if
+              (cycle.availableEntities === 0) {
+              <div class="table-row unavailable-cycle">
+                <div class="cycle-cell">
+                  <div
+                    class="priority-indicator"
+                    [ngClass]="getPriorityClass(cycle.priority)"
+                  >
+                    @if (cycle.priority === 'HIGH' || cycle.priority ===
+                    'MEDIUM' || cycle.priority === 'LOW') {
+                    <mat-icon>north</mat-icon>
+                    } @else {
+                    <mat-icon>south</mat-icon>
+                    }
+                  </div>
+                  <span class="cycle-name">{{ cycle.name }}</span>
+                </div>
+                <div class="distribution-cell">
+                  <span class="divider-available">0/0</span>
+                </div>
+                <div class="events-cell">0</div>
+              </div>
+              } } @empty {
+              <div class="empty-state">
+                Não há ciclos sem entidades disponíveis
+              </div>
+              }
             </div>
           </div>
         </div>
       </section>
 
-      <!-- Forecast section -->
       <section class="forecast-section">
         <h2 class="section-title">Previsão de eventos futuros</h2>
 
@@ -155,7 +211,6 @@
       </section>
     </mat-card-content>
 
-    <!-- Action buttons -->
     <mat-card-actions align="end">
       <button mat-stroked-button class="secondary-button" (click)="cancel()">
         Fechar
@@ -171,4 +226,5 @@
       </button>
     </mat-card-actions>
   </mat-card>
+  }
 </div>

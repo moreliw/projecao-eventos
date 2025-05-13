@@ -1,4 +1,4 @@
-export type Priority = "HIGH" | "MEDIUM" | "LOW";
+export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | 'NEUTRAL';
 
 export interface CycleStructure {
   day: number;
